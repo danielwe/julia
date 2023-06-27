@@ -600,7 +600,15 @@ function iterate(c::Channel, state=nothing)
             end
         end
     else
-        return nothing
+        # adapted from check_channel_state(c)
+        (@atomic :acquire c.state) === :open && concurrency_violation()
+        e = c.excp
+        # nothing is treated the same as closed_exception(), as in check_channel_state(c)
+        if (e !== nothing) || (isa(e, InvalidStateException) && e.state === :closed)
+            return nothing
+        else
+            throw(e)
+        end
     end
 end
 
